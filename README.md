@@ -30,3 +30,24 @@ npm run start:development
 - Go to `http://localhost:3000/api` and verify server is live.
 
 - After completing the backend setup, Go to https://github.com/Yagnik-Gohil/e-signature-react and setup the e-signature frontend.
+
+
+## Migration Commands (For development purpose)
+
+#### Migration create command: (Auto detect)
+
+```
+npm run migration:generate src/migrations/name
+```
+
+#### Migration create command: (Custom)
+
+```
+npx typeorm migration:create src/migrations/name
+```
+
+#### Seeder create command:
+
+```
+npx typeorm migration:create src/seeders/name
+```
