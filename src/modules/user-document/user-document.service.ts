@@ -1,26 +1,170 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { CreateUserDocumentDto } from './dto/create-user-document.dto';
 import { UpdateUserDocumentDto } from './dto/update-user-document.dto';
+import { InjectRepository } from '@nestjs/typeorm';
+import { UserDocument } from './entities/user-document.entity';
+import { FindManyOptions, IsNull, Repository } from 'typeorm';
+import { UserDocumentType } from '@shared/constants/enum';
+import { MESSAGE } from '@shared/constants/constant';
+import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class UserDocumentService {
-  create(createUserDocumentDto: CreateUserDocumentDto) {
-    return 'This action adds a new userDocument';
+  constructor(
+    @InjectRepository(UserDocument)
+    private readonly userDocumentRepository: Repository<UserDocument>,
+  ) {}
+  async create(createUserDocumentDto: CreateUserDocumentDto) {
+    const isExists = await this.userDocumentRepository.findOne({
+      where: {
+        user: { id: createUserDocumentDto.user },
+        document: { id: createUserDocumentDto.document },
+      },
+    });
+
+    if (isExists) {
+      throw new BadRequestException(MESSAGE.ALREADY_EXISTS('Recipient'));
+    }
+
+    const count = await this.userDocumentRepository.count({
+      where: { document: { id: createUserDocumentDto.document } },
+    });
+
+    const result = await this.userDocumentRepository.save({
+      user: { id: createUserDocumentDto.user },
+      document: { id: createUserDocumentDto.document },
+      role: createUserDocumentDto.role,
+      sequence: count + 1,
+      type: UserDocumentType.SIGNER,
+    });
+
+    return plainToInstance(UserDocument, result);
   }
 
-  findAll() {
-    return `This action returns all userDocument`;
+  async findAll(
+    limit: number,
+    offset: number,
+    document: string,
+  ): Promise<[UserDocument[], number]> {
+    const query = `
+      WITH owner_data AS (
+          SELECT user_id AS owner_id
+          FROM user_document
+          WHERE type = 'owner' AND document_id = $1 and deleted_at IS NULL
+      ),
+      contacts AS (
+          SELECT c.recipient_id, c.recipient_name
+          FROM contact c
+          JOIN owner_data o ON c.owner_id = o.owner_id
+          WHERE c.deleted_at IS NULL
+      )
+      SELECT 
+          ud.id,
+          ud.role,
+          ud.sequence,
+          u.id as user_id,
+          CASE 
+              WHEN ud.type = 'owner' THEN u.name
+              WHEN ud.type = 'signer' THEN c.recipient_name
+          END AS name,
+          u.email
+      FROM user_document ud
+      JOIN "user" u ON ud.user_id = u.id
+      LEFT JOIN contacts c ON ud.user_id = c.recipient_id
+      WHERE ud.document_id = $1 AND ud.deleted_at IS NULL
+      ORDER BY ud.sequence
+      LIMIT $2 OFFSET $3;
+    `;
+
+    const [list, count] = await Promise.all([
+      this.userDocumentRepository.query(query, [document, limit, offset]),
+      this.userDocumentRepository.count({
+        where: { document: { id: document } },
+      }),
+    ]);
+
+    return [list, count];
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} userDocument`;
+  async update(id: string, updateUserDocumentDto: UpdateUserDocumentDto) {
+    const result = await this.userDocumentRepository.update(
+      { id: id },
+      { role: updateUserDocumentDto.role },
+    );
+    return result;
   }
 
-  update(id: number, updateUserDocumentDto: UpdateUserDocumentDto) {
-    return `This action updates a #${id} userDocument`;
+  async updateSequence(
+    id: string,
+    updateUserDocumentDto: UpdateUserDocumentDto,
+  ) {
+    const { sequence: newSequence } = updateUserDocumentDto;
+
+    // Get the current record
+    const currentRecord = await this.userDocumentRepository.findOne({
+      where: { id },
+      relations: ['document'], // Ensure document relation is included
+    });
+
+    if (!currentRecord) {
+      throw new BadRequestException(MESSAGE.METHOD_NOT_ALLOWED);
+    }
+
+    const oldSequence = currentRecord.sequence;
+    const documentId = currentRecord.document.id; // Assuming relation exists
+
+    if (oldSequence === newSequence) {
+      throw new BadRequestException('No changes needed');
+    }
+
+    // Adjust sequence values for other records
+    if (oldSequence < newSequence) {
+      // Moving down: Shift up affected items
+      await this.userDocumentRepository
+        .createQueryBuilder()
+        .update(UserDocument)
+        .set({ sequence: () => 'sequence - 1' }) // Decrease sequence by 1
+        .where(
+          'sequence > :oldSeq AND sequence <= :newSeq AND document_id = :docId',
+          {
+            oldSeq: oldSequence,
+            newSeq: newSequence,
+            docId: documentId,
+          },
+        )
+        .execute();
+    } else {
+      // Moving up: Shift down affected items
+      await this.userDocumentRepository
+        .createQueryBuilder()
+        .update(UserDocument)
+        .set({ sequence: () => 'sequence + 1' }) // Increase sequence by 1
+        .where(
+          'sequence >= :newSeq AND sequence < :oldSeq AND document_id = :docId',
+          {
+            oldSeq: oldSequence,
+            newSeq: newSequence,
+            docId: documentId,
+          },
+        )
+        .execute();
+    }
+
+    // Finally, update the selected record's sequence
+    const result = await this.userDocumentRepository.update(
+      { id },
+      { sequence: newSequence },
+    );
+
+    return result;
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} userDocument`;
+  async remove(id: string) {
+    const result = await this.userDocumentRepository.softDelete({
+      id: id,
+      deleted_at: IsNull(),
+    });
+
+    return result;
   }
 }

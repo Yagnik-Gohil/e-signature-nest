@@ -11,12 +11,16 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { plainToInstance } from 'class-transformer';
 import { Document } from '@modules/document/entities/document.entity';
+import { UserDocument } from '@modules/user-document/entities/user-document.entity';
+import { UserDocumentType } from '@shared/constants/enum';
 
 @Injectable()
 export class UploadService {
   constructor(
     @InjectRepository(Document)
     private readonly documentRepository: Repository<Document>,
+    @InjectRepository(UserDocument)
+    private readonly userDocumentRepository: Repository<UserDocument>,
   ) {}
 
   private awsConfig = {
@@ -39,6 +43,8 @@ export class UploadService {
     filePath: string,
     mimeType: string,
     folder: string,
+    title: string,
+    user: string,
   ): Promise<Document> {
     const fileName = path.basename(filePath);
 
@@ -53,14 +59,23 @@ export class UploadService {
       const command = new PutObjectCommand(params);
       await this.s3Client.send(command);
 
-      const asset = await this.documentRepository.save({
+      const document = await this.documentRepository.save({
         base_url: process.env.CDN_ENDPOINT,
         root: `${VALUE.rootFolder}/`,
         folder: `${folder}/`,
         name: fileName,
+        title: title,
       });
 
-      return plainToInstance(Document, asset);
+      await this.userDocumentRepository.save({
+        user: { id: user },
+        document: { id: document.id },
+        role: 'Owner',
+        sequence: 1,
+        type: UserDocumentType.OWNER,
+      });
+
+      return plainToInstance(Document, document);
     } catch (error) {
       throw new Error(`Failed to upload file to S3: ${error.message}`);
     }

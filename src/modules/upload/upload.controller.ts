@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Post,
+  Req,
   Res,
   UploadedFile,
   UseGuards,
@@ -15,9 +16,10 @@ import { v4 as uuid } from 'uuid';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import response from '@shared/response';
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { AuthGuard } from '@shared/guard/auth.guard';
 import { MESSAGE } from '@shared/constants/constant';
+import { User } from '@modules/user/entities/user.entity';
 
 @Controller('upload')
 export class UploadController {
@@ -49,6 +51,7 @@ export class UploadController {
     @UploadedFile() file: Express.Multer.File,
     @Body('folder') folder: string,
     @Body('title') title: string,
+    @Req() req: Request,
     @Res() res: Response,
   ) {
     if (!file) {
@@ -66,10 +69,13 @@ export class UploadController {
     const filePath = path.resolve('public/document', file.filename);
 
     try {
+      const user: User = req['user'];
       const document = await this.uploadService.uploadFileFromDisk(
         filePath,
         file.mimetype,
         folder,
+        title,
+        user.id
       );
 
       // Delete the temporary file after successful upload

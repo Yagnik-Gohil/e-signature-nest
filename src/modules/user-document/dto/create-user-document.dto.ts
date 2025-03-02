@@ -1,1 +1,5 @@
-export class CreateUserDocumentDto {}
+export class CreateUserDocumentDto {
+  user: string;
+  document: string;
+  role: string;
+}
