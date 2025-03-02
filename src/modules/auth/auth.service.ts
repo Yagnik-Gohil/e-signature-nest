@@ -10,7 +10,7 @@ import { MESSAGE } from '@shared/constants/constant';
 import hashPassword from '@shared/function/hash-password';
 import { LoginDto } from './dto/login.dto';
 import comparePassword from '@shared/function/compare-password';
-import { DefaultStatus } from '@shared/constants/enum';
+import { DefaultStatus, UserType } from '@shared/constants/enum';
 
 @Injectable()
 export class AuthService {
@@ -75,17 +75,24 @@ export class AuthService {
       },
     });
 
-    if (isExists) {
+    if (isExists && isExists.type == UserType.REGISTERED) {
       throw new BadRequestException(MESSAGE.ALREADY_EXISTS('User'));
     }
 
     const hashedPassword = await hashPassword(signUpDto.password);
 
-    const user = await this.userRepository.save({
+    const payload = {
       name: signUpDto.name,
       email: signUpDto.email,
       password: hashedPassword,
-    });
+      type: UserType.REGISTERED,
+    };
+
+    if (isExists && isExists.type == UserType.PUBLIC) {
+      Object.assign(payload, { id: isExists.id });
+    }
+
+    const user = await this.userRepository.save(payload);
 
     const loginResponse = await this.getLoginResponse(
       user,
@@ -100,6 +107,7 @@ export class AuthService {
       where: {
         email: loginDto.email,
         status: DefaultStatus.ACTIVE,
+        type: UserType.REGISTERED,
       },
     });
 

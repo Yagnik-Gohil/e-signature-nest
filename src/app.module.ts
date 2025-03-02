@@ -9,6 +9,8 @@ import { database } from 'config/database';
 import { TokenModule } from './modules/token/token.module';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { DocumentModule } from './modules/document/document.module';
+import { UploadModule } from './modules/upload/upload.module';
 
 @Module({
   imports: [
@@ -26,6 +28,8 @@ import { AuthModule } from './modules/auth/auth.module';
     TokenModule,
     UserModule,
     AuthModule,
+    DocumentModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService],

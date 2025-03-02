@@ -1,5 +1,5 @@
 import { Token } from '@modules/token/entities/token.entity';
-import { DefaultStatus } from '@shared/constants/enum';
+import { DefaultStatus, UserType } from '@shared/constants/enum';
 import { DefaultEntity } from '@shared/entities/default.entity';
 import { Column, Entity, OneToMany } from 'typeorm';
 
@@ -25,8 +25,16 @@ export class User extends DefaultEntity {
 
   @Column({
     type: 'character varying',
+    nullable: true,
   })
   password: string;
+
+  @Column({
+    type: 'enum',
+    enum: UserType,
+    default: UserType.PUBLIC,
+  })
+  type: UserType;
 
   @OneToMany(() => Token, (token) => token.user)
   token: Token[];
