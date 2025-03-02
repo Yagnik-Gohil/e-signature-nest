@@ -11,6 +11,8 @@ import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { DocumentModule } from './modules/document/document.module';
 import { UploadModule } from './modules/upload/upload.module';
+import { UserDocumentModule } from './modules/user-document/user-document.module';
+import { ContactModule } from './modules/contact/contact.module';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { UploadModule } from './modules/upload/upload.module';
     AuthModule,
     DocumentModule,
     UploadModule,
+    UserDocumentModule,
+    ContactModule,
   ],
   controllers: [AppController],
   providers: [AppService],

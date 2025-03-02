@@ -48,6 +48,7 @@ export class UploadController {
   async create(
     @UploadedFile() file: Express.Multer.File,
     @Body('folder') folder: string,
+    @Body('title') title: string,
     @Res() res: Response,
   ) {
     if (!file) {
@@ -56,6 +57,10 @@ export class UploadController {
 
     if (!folder) {
       throw new BadRequestException('Folder name is required.');
+    }
+
+    if (!title) {
+      throw new BadRequestException('Title is required.');
     }
 
     const filePath = path.resolve('public/document', file.filename);

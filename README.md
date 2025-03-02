@@ -17,7 +17,8 @@ npm install
 
 ### ENV & Database Setup
 - Create database `e_signature_dev` in PostgreSQL
-- Go to `config/env/development.env` and update the database credentials
+- Create `config/env/development.env` from `config/env/example.env`
+- Go to `config/env/development.env` and update the database & AWS credentials
 - Run Below command to migrate & seed the database
 ```
 npm run migration:up:development
