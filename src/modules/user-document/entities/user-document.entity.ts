@@ -9,7 +9,7 @@ export class UserDocument extends DefaultEntity {
   @Column({
     type: 'enum',
     enum: SignatureStatus,
-    default: SignatureStatus.PENDING,
+    default: SignatureStatus.DRAFT,
   })
   status: SignatureStatus;
 

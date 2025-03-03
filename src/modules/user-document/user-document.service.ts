@@ -3,8 +3,8 @@ import { CreateUserDocumentDto } from './dto/create-user-document.dto';
 import { UpdateUserDocumentDto } from './dto/update-user-document.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserDocument } from './entities/user-document.entity';
-import { FindManyOptions, IsNull, Repository } from 'typeorm';
-import { UserDocumentType } from '@shared/constants/enum';
+import { FindManyOptions, IsNull, Not, Repository } from 'typeorm';
+import { SignatureStatus, UserDocumentType } from '@shared/constants/enum';
 import { MESSAGE } from '@shared/constants/constant';
 import { plainToInstance } from 'class-transformer';
 
@@ -80,6 +80,72 @@ export class UserDocumentService {
       this.userDocumentRepository.query(query, [document, limit, offset]),
       this.userDocumentRepository.count({
         where: { document: { id: document } },
+      }),
+    ]);
+
+    return [list, count];
+  }
+
+  async findAllDocuments(
+    limit: number,
+    offset: number,
+    user: string,
+  ): Promise<[Document[], number]> {
+    const query = `
+        WITH filtered_documents AS (
+            SELECT DISTINCT d.id
+            FROM document d
+            JOIN user_document ud ON d.id = ud.document_id
+            WHERE ud.user_id = $1
+            AND (
+                (ud.type = 'owner') 
+                OR 
+                (ud.type = 'signer' AND ud.status != 'draft')
+            )
+        )
+        SELECT 
+            d.id, 
+            d.title, 
+            d.base_url, 
+            d.root, 
+            d.folder, 
+            d.name,
+            COALESCE(
+                json_agg(
+                    json_build_object(
+                        'id', ud.id,
+                        'status', ud.status,
+                        'role', ud.role,
+                        'type', ud.type,
+                        'sequence', ud.sequence,
+                        'user', json_build_object(
+                            'id', u.id,
+                            'name', u.name,
+                            'email', u.email
+                        )
+                    ) ORDER BY ud.sequence
+                ) FILTER (WHERE ud.id IS NOT NULL), '[]'
+            ) AS user_documents
+        FROM document d
+        JOIN user_document ud ON d.id = ud.document_id
+        JOIN "user" u ON ud.user_id = u.id
+        WHERE d.id IN (SELECT id FROM filtered_documents)
+        GROUP BY d.id, d.title, d.base_url, d.root, d.folder, d.name
+        ORDER BY d.created_at DESC
+        LIMIT $2 OFFSET $3;
+    `;
+
+    const [list, count] = await Promise.all([
+      this.userDocumentRepository.query(query, [user, limit, offset]),
+      this.userDocumentRepository.count({
+        where: [
+          { user: { id: user }, type: UserDocumentType.OWNER },
+          {
+            user: { id: user },
+            type: UserDocumentType.SIGNER,
+            status: Not(SignatureStatus.DRAFT),
+          },
+        ],
       }),
     ]);
 

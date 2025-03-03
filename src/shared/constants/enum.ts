@@ -20,6 +20,7 @@ export enum DocumentStatus {
 }
 
 export enum SignatureStatus {
+  DRAFT = 'draft',
   PENDING = 'pending',
   SIGNED = 'signed',
 }

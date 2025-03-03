@@ -22,10 +22,8 @@ import {
   updateSequenceSchema,
   updateUserDocumentSchema,
 } from './dto/user-document.schema';
-import { User } from '@modules/user/entities/user.entity';
 import response from '@shared/response';
 import { MESSAGE, VALUE } from '@shared/constants/constant';
-import { UserDocumentType } from '@shared/constants/enum';
 
 @UseGuards(AuthGuard)
 @Controller('user-document')
@@ -63,6 +61,31 @@ export class UserDocumentController {
     return response.successResponseWithPagination(
       {
         message: MESSAGE.RECORD_FOUND('Recipient'),
+        total: count,
+        limit: +limit,
+        offset: +offset,
+        data: list,
+      },
+      res,
+    );
+  }
+
+  @Get('document')
+  async findAllDocuments(
+    @Query('limit') limit: number = VALUE.limit,
+    @Query('offset') offset: number = VALUE.offset,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const user = req['user']['id'];
+    const [list, count] = await this.userDocumentService.findAllDocuments(
+      +limit,
+      +offset,
+      user,
+    );
+    return response.successResponseWithPagination(
+      {
+        message: MESSAGE.RECORD_FOUND('Document'),
         total: count,
         limit: +limit,
         offset: +offset,
@@ -117,10 +140,7 @@ export class UserDocumentController {
   }
 
   @Delete(':id')
-  async remove(
-    @Param('id') id: string,
-    @Res() res: Response,
-  ) {
+  async remove(@Param('id') id: string, @Res() res: Response) {
     const data = await this.userDocumentService.remove(id);
     return response.successResponse(
       {
