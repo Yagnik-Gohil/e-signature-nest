@@ -153,6 +153,49 @@ export class UserDocumentService {
     return [list, count];
   }
 
+  async document(id: string, user: string): Promise<Document> {
+    const query = `
+      SELECT 
+        d.id, 
+        d.title, 
+        d.base_url, 
+        d.root, 
+        d.folder, 
+        d.name,
+        d.status,
+        COALESCE(
+            json_agg(
+                json_build_object(
+                    'id', ud.id,
+                    'status', ud.status,
+                    'role', ud.role,
+                    'type', ud.type,
+                    'sequence', ud.sequence,
+                    'user', json_build_object(
+                        'id', u.id,
+                        'name', u.name,
+                        'email', u.email
+                    )
+                ) ORDER BY ud.sequence
+            ) FILTER (WHERE ud.id IS NOT NULL), '[]'
+        ) AS user_documents
+      FROM document d
+      JOIN user_document ud ON d.id = ud.document_id
+      JOIN "user" u ON ud.user_id = u.id
+      WHERE d.id = $1
+        AND ud.user_id = $2
+        AND (
+          ud.type = 'owner' 
+          OR (ud.type = 'signer' AND ud.status != 'draft')
+        )
+      GROUP BY d.id, d.title, d.base_url, d.root, d.folder, d.name;
+    `;
+
+    const [result] = await this.userDocumentRepository.query(query, [id, user]);
+
+    return result;
+  }
+
   async update(id: string, updateUserDocumentDto: UpdateUserDocumentDto) {
     const result = await this.userDocumentRepository.update(
       { id: id },

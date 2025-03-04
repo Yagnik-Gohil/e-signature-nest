@@ -95,6 +95,25 @@ export class UserDocumentController {
     );
   }
 
+  @Get('document/:id')
+  async documents(
+    @Param('id') id: string,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    const user = req['user']['id'];
+    const data = await this.userDocumentService.document(id, user);
+    return response.successResponse(
+      {
+        message: data
+          ? MESSAGE.RECORD_FOUND('Document')
+          : MESSAGE.RECORD_NOT_FOUND('Document'),
+        data: data,
+      },
+      res,
+    );
+  }
+
   @Patch('role/:id')
   async updateRole(
     @Param('id') id: string,
