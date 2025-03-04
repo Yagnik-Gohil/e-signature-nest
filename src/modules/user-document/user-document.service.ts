@@ -110,6 +110,7 @@ export class UserDocumentService {
             d.root, 
             d.folder, 
             d.name,
+            d.status,
             COALESCE(
                 json_agg(
                     json_build_object(
