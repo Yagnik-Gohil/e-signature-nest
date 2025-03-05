@@ -1,5 +1,8 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { CreateUserDocumentDto } from './dto/create-user-document.dto';
+import {
+  CreateSignatureBoxDto,
+  CreateUserDocumentDto,
+} from './dto/create-user-document.dto';
 import { UpdateUserDocumentDto } from './dto/update-user-document.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserDocument } from './entities/user-document.entity';
@@ -96,7 +99,7 @@ export class UserDocumentService {
             SELECT DISTINCT d.id
             FROM document d
             JOIN user_document ud ON d.id = ud.document_id
-            WHERE ud.user_id = $1
+            WHERE ud.user_id = $1 AND ud.deleted_at IS NULL
             AND (
                 (ud.type = 'owner') 
                 OR 
@@ -128,9 +131,10 @@ export class UserDocumentService {
                 ) FILTER (WHERE ud.id IS NOT NULL), '[]'
             ) AS user_documents
         FROM document d
-        JOIN user_document ud ON d.id = ud.document_id
+        JOIN user_document ud ON d.id = ud.document_id and ud.deleted_at IS NULL
         JOIN "user" u ON ud.user_id = u.id
         WHERE d.id IN (SELECT id FROM filtered_documents)
+        AND d.deleted_at IS NULL
         GROUP BY d.id, d.title, d.base_url, d.root, d.folder, d.name
         ORDER BY d.created_at DESC
         LIMIT $2 OFFSET $3;
@@ -151,49 +155,6 @@ export class UserDocumentService {
     ]);
 
     return [list, count];
-  }
-
-  async document(id: string, user: string): Promise<Document> {
-    const query = `
-      SELECT 
-        d.id, 
-        d.title, 
-        d.base_url, 
-        d.root, 
-        d.folder, 
-        d.name,
-        d.status,
-        COALESCE(
-            json_agg(
-                json_build_object(
-                    'id', ud.id,
-                    'status', ud.status,
-                    'role', ud.role,
-                    'type', ud.type,
-                    'sequence', ud.sequence,
-                    'user', json_build_object(
-                        'id', u.id,
-                        'name', u.name,
-                        'email', u.email
-                    )
-                ) ORDER BY ud.sequence
-            ) FILTER (WHERE ud.id IS NOT NULL), '[]'
-        ) AS user_documents
-      FROM document d
-      JOIN user_document ud ON d.id = ud.document_id
-      JOIN "user" u ON ud.user_id = u.id
-      WHERE d.id = $1
-        AND ud.user_id = $2
-        AND (
-          ud.type = 'owner' 
-          OR (ud.type = 'signer' AND ud.status != 'draft')
-        )
-      GROUP BY d.id, d.title, d.base_url, d.root, d.folder, d.name;
-    `;
-
-    const [result] = await this.userDocumentRepository.query(query, [id, user]);
-
-    return result;
   }
 
   async update(id: string, updateUserDocumentDto: UpdateUserDocumentDto) {
@@ -276,5 +237,11 @@ export class UserDocumentService {
     });
 
     return result;
+  }
+
+  async createSignatureBox(createSignatureBoxDto: CreateSignatureBoxDto) {
+    await this.userDocumentRepository.save(
+      createSignatureBoxDto.user_document.map((item) => item),
+    );
   }
 }

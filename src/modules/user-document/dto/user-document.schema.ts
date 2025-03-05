@@ -13,3 +13,15 @@ export const updateUserDocumentSchema = Joi.object({
 export const updateSequenceSchema = Joi.object({
   sequence: Joi.number().required(),
 });
+
+export const createSignatureBoxSchema = Joi.object({
+  user_document: Joi.array().items({
+    id: Joi.string().uuid().required(),
+    signature_box: Joi.object({
+      x: Joi.number().required(),
+      y: Joi.number().required(),
+      width: Joi.number().required(),
+      height: Joi.number().required(),
+    }),
+  }),
+});

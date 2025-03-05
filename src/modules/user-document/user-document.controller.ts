@@ -12,12 +12,13 @@ import {
   Query,
 } from '@nestjs/common';
 import { UserDocumentService } from './user-document.service';
-import { CreateUserDocumentDto } from './dto/create-user-document.dto';
+import { CreateSignatureBoxDto, CreateUserDocumentDto } from './dto/create-user-document.dto';
 import { UpdateUserDocumentDto } from './dto/update-user-document.dto';
 import { AuthGuard } from '@shared/guard/auth.guard';
 import { Request, Response } from 'express';
 import { JoiValidationPipe } from '@shared/pipes/joi-validation.pipe';
 import {
+  createSignatureBoxSchema,
   createUserDocumentSchema,
   updateSequenceSchema,
   updateUserDocumentSchema,
@@ -40,6 +41,22 @@ export class UserDocumentController {
     return response.successCreate(
       {
         message: MESSAGE.RECORD_CREATED('Recipient'),
+        data,
+      },
+      res,
+    );
+  }
+
+  @Post('signature-boxes')
+  async addSignatureBoxes(
+    @Body(new JoiValidationPipe(createSignatureBoxSchema))
+    createSignatureBoxDto: CreateSignatureBoxDto,
+    @Res() res: Response,
+  ) {
+    const data = await this.userDocumentService.createSignatureBox(createSignatureBoxDto);
+    return response.successCreate(
+      {
+        message: MESSAGE.RECORD_CREATED('Signature Box'),
         data,
       },
       res,
@@ -90,25 +107,6 @@ export class UserDocumentController {
         limit: +limit,
         offset: +offset,
         data: list,
-      },
-      res,
-    );
-  }
-
-  @Get('document/:id')
-  async documents(
-    @Param('id') id: string,
-    @Req() req: Request,
-    @Res() res: Response,
-  ) {
-    const user = req['user']['id'];
-    const data = await this.userDocumentService.document(id, user);
-    return response.successResponse(
-      {
-        message: data
-          ? MESSAGE.RECORD_FOUND('Document')
-          : MESSAGE.RECORD_NOT_FOUND('Document'),
-        data: data,
       },
       res,
     );
