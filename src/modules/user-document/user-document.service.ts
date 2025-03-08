@@ -1,21 +1,25 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import {
-  CreateSignatureBoxDto,
-  CreateUserDocumentDto,
-} from './dto/create-user-document.dto';
+import { CreateUserDocumentDto } from './dto/create-user-document.dto';
 import { UpdateUserDocumentDto } from './dto/update-user-document.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserDocument } from './entities/user-document.entity';
-import { FindManyOptions, IsNull, Not, Repository } from 'typeorm';
-import { SignatureStatus, UserDocumentType } from '@shared/constants/enum';
+import { IsNull, Not, Repository } from 'typeorm';
+import {
+  DocumentStatus,
+  SignatureStatus,
+  UserDocumentType,
+} from '@shared/constants/enum';
 import { MESSAGE } from '@shared/constants/constant';
 import { plainToInstance } from 'class-transformer';
+import { Document } from '@modules/document/entities/document.entity';
 
 @Injectable()
 export class UserDocumentService {
   constructor(
     @InjectRepository(UserDocument)
     private readonly userDocumentRepository: Repository<UserDocument>,
+    @InjectRepository(Document)
+    private readonly documentRepository: Repository<Document>,
   ) {}
   async create(createUserDocumentDto: CreateUserDocumentDto) {
     const isExists = await this.userDocumentRepository.findOne({
@@ -39,6 +43,7 @@ export class UserDocumentService {
       role: createUserDocumentDto.role,
       sequence: count + 1,
       type: UserDocumentType.SIGNER,
+      status: SignatureStatus.PENDING,
     });
 
     return plainToInstance(UserDocument, result);
@@ -129,7 +134,7 @@ export class UserDocumentService {
                         )
                     ) ORDER BY ud.sequence
                 ) FILTER (WHERE ud.id IS NOT NULL), '[]'
-            ) AS user_documents
+            ) AS user_document
         FROM document d
         JOIN user_document ud ON d.id = ud.document_id and ud.deleted_at IS NULL
         JOIN "user" u ON ud.user_id = u.id
@@ -239,9 +244,7 @@ export class UserDocumentService {
     return result;
   }
 
-  async createSignatureBox(createSignatureBoxDto: CreateSignatureBoxDto) {
-    await this.userDocumentRepository.save(
-      createSignatureBoxDto.user_document.map((item) => item),
-    );
+  async updateDocumentStatus(id: string, status: DocumentStatus) {
+    await this.documentRepository.update({ id }, { status });
   }
 }

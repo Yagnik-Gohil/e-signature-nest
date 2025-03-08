@@ -12,7 +12,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { UserDocumentService } from './user-document.service';
-import { CreateSignatureBoxDto, CreateUserDocumentDto } from './dto/create-user-document.dto';
+import { CreateUserDocumentDto } from './dto/create-user-document.dto';
 import { UpdateUserDocumentDto } from './dto/update-user-document.dto';
 import { AuthGuard } from '@shared/guard/auth.guard';
 import { Request, Response } from 'express';
@@ -30,38 +30,6 @@ import { MESSAGE, VALUE } from '@shared/constants/constant';
 @Controller('user-document')
 export class UserDocumentController {
   constructor(private readonly userDocumentService: UserDocumentService) {}
-
-  @Post()
-  async create(
-    @Body(new JoiValidationPipe(createUserDocumentSchema))
-    createUserDocumentDto: CreateUserDocumentDto,
-    @Res() res: Response,
-  ) {
-    const data = await this.userDocumentService.create(createUserDocumentDto);
-    return response.successCreate(
-      {
-        message: MESSAGE.RECORD_CREATED('Recipient'),
-        data,
-      },
-      res,
-    );
-  }
-
-  @Post('signature-boxes')
-  async addSignatureBoxes(
-    @Body(new JoiValidationPipe(createSignatureBoxSchema))
-    createSignatureBoxDto: CreateSignatureBoxDto,
-    @Res() res: Response,
-  ) {
-    const data = await this.userDocumentService.createSignatureBox(createSignatureBoxDto);
-    return response.successCreate(
-      {
-        message: MESSAGE.RECORD_CREATED('Signature Box'),
-        data,
-      },
-      res,
-    );
-  }
 
   @Get()
   async findAll(

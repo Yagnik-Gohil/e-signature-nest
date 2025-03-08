@@ -21,12 +21,6 @@ export class DocumentService {
           role: true,
           type: true,
           sequence: true,
-          signature_box: {
-            x: true,
-            y: true,
-            width: true,
-            height: true,
-          },
           user: { id: true, name: true, email: true },
         },
       },

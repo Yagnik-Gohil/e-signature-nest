@@ -1,7 +1,6 @@
 import { Document } from '@modules/document/entities/document.entity';
 import { User } from '@modules/user/entities/user.entity';
 import { SignatureStatus, UserDocumentType } from '@shared/constants/enum';
-import { ISignatureBox } from '@shared/constants/types';
 import { DefaultEntity } from '@shared/entities/default.entity';
 import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 
@@ -36,6 +35,15 @@ export class UserDocument extends DefaultEntity {
   @Column('integer')
   sequence: number;
 
-  @Column({ type: 'jsonb', nullable: true })
-  signature_box: ISignatureBox;
+  @Column({ type: 'character varying', nullable: true })
+  base_url: string;
+
+  @Column({ type: 'character varying', nullable: true })
+  root: string;
+
+  @Column({ type: 'character varying', nullable: true })
+  folder: string;
+
+  @Column({ type: 'character varying', nullable: true })
+  name: string;
 }

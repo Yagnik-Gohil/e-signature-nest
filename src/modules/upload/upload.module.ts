@@ -5,10 +5,11 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Token } from '@modules/token/entities/token.entity';
 import { Document } from '@modules/document/entities/document.entity';
 import { UserDocument } from '@modules/user-document/entities/user-document.entity';
+import { UserDocumentService } from '@modules/user-document/user-document.service';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Token, Document, UserDocument])],
   controllers: [UploadController],
-  providers: [UploadService],
+  providers: [UploadService, UserDocumentService],
 })
 export class UploadModule {}
