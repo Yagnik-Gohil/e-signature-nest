@@ -14,6 +14,9 @@ export const MESSAGE = {
   WRONG_CREDENTIALS: 'Wrong credentials!',
   UNAUTHENTICATED: 'Please log in to access.',
   FILE_REQUIRED: 'File is required',
+  MAIL_NOT_SENT: 'Mail not sent',
+  YOU_HAVE_NEW_DOCUMENT_TO_SIGN: 'You have new document to sign',
+  DOCUMENT_SIGNED_BY_ALL: 'Document signed by all signers',
 };
 
 export const VALUE = {

@@ -12,6 +12,9 @@ import {
 import { MESSAGE } from '@shared/constants/constant';
 import { plainToInstance } from 'class-transformer';
 import { Document } from '@modules/document/entities/document.entity';
+import { renderFile } from 'ejs';
+import { join } from 'path';
+import { EmailService } from '@shared/email-service';
 
 @Injectable()
 export class UserDocumentService {
@@ -20,6 +23,7 @@ export class UserDocumentService {
     private readonly userDocumentRepository: Repository<UserDocument>,
     @InjectRepository(Document)
     private readonly documentRepository: Repository<Document>,
+    private emailService: EmailService,
   ) {}
   async create(createUserDocumentDto: CreateUserDocumentDto) {
     const isExists = await this.userDocumentRepository.findOne({
@@ -246,5 +250,47 @@ export class UserDocumentService {
 
   async updateDocumentStatus(id: string, status: DocumentStatus) {
     await this.documentRepository.update({ id }, { status });
+  }
+
+  async sendMailToNextUser(document: string, user: string) {
+    const userDocument = await this.userDocumentRepository.findOne({
+      where: {
+        user: { id: user },
+        document: { id: document },
+        type: UserDocumentType.SIGNER,
+      },
+      relations: { user: true },
+    });
+
+    const ejsTemplate = await renderFile(
+      join(__dirname + '/../../../shared/ejs-templates/new-document-to-sign.ejs'),
+      {
+        name: userDocument.user.name,
+      },
+    );
+    await this.emailService.sendMail({
+      to: userDocument.user.email,
+      subject: MESSAGE.YOU_HAVE_NEW_DOCUMENT_TO_SIGN,
+      html: ejsTemplate,
+    });
+  }
+
+  async sendMailToOwner(document: string) {
+    const userDocument = await this.userDocumentRepository.findOne({
+      where: { document: { id: document }, type: UserDocumentType.OWNER },
+      relations: { user: true },
+    });
+
+    const ejsTemplate = await renderFile(
+      join(__dirname + '/../../../shared/ejs-templates/document-signed.ejs'),
+      {
+        name: userDocument.user.name,
+      },
+    );
+    await this.emailService.sendMail({
+      to: userDocument.user.email,
+      subject: MESSAGE.DOCUMENT_SIGNED_BY_ALL,
+      html: ejsTemplate,
+    });
   }
 }

@@ -160,15 +160,18 @@ export class UploadController {
           role: `Role ${userDocument.sequence + 1}`,
           sequence: userDocument.sequence + 1,
         });
-        // ! 2. Send email to the next user
+        // 2. Send email to the next user
+        await this.userDocumentService.sendMailToNextUser(document, next_user)
       }
 
       if (userDocument.sequence === 3) {
-        // 1. Send email to the first user that the document is signed
+        // 1. Update the document status to completed
         await this.userDocumentService.updateDocumentStatus(
           document,
           DocumentStatus.COMPLETED,
         );
+        // 2. Send email to the first user that the document is signed
+        await this.userDocumentService.sendMailToOwner(document);
       }
 
       return response.successCreate(
